@@ -1,0 +1,10 @@
+:set prompt "> "
+
+:set -XBinaryLiterals
+:set -XOverloadedStrings
+:set -XMagicHash
+:set -XNumericUnderscores
+:set -XRecordWildCards
+
+:cd src/
+:l Kvs
