@@ -273,9 +273,9 @@ rotateRight node@(Node _ _ _ (Links parentRef leftRef rightRef)) = do
   newParent <- readIORef newParentRef
   case newParent of
     Empty -> pure ()
-    Node _ _ _ (Links _ pRightRef pLeftRef) -> do
-      pRight <- readIORef pRightRef
+    Node _ _ _ (Links _ pLeftRef pRightRef) -> do
       pLeft <- readIORef pLeftRef
+      pRight <- readIORef pRightRef
       if node == pLeft
       then writeIORef pLeftRef newNode
       else when (node == pRight) 
@@ -295,4 +295,3 @@ testTree inputs = do
   tree <- empty
   for_ inputs (uncurry $ insert tree)
   pure tree
-
