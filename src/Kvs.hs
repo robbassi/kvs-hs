@@ -1,4 +1,4 @@
-module KVS where
+module Kvs where
 
 import CommitLog
 import Segments
