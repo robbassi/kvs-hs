@@ -52,7 +52,7 @@ empty :: IO RBTree
 empty = RBTree <$> newIORef Nothing
 
 toList :: RBTree -> IO [(Key, Value)]
-toList (RBTree rootRef) = readIORef rootRef >>= toList'
+toList (RBTree rootRef) = toList' =<< readIORef rootRef
   where 
     toList' :: Maybe RBTreeNode -> IO [(Key, Value)]
     toList' Nothing = pure []
@@ -67,15 +67,15 @@ toList (RBTree rootRef) = readIORef rootRef >>= toList'
         pure $ tail' ++ rightTail
 
 search :: RBTree -> Key -> IO (Maybe Value)
-search (RBTree rootRef) searchKey = readIORef rootRef >>= search'
+search (RBTree rootRef) searchKey = search' =<< readIORef rootRef
   where
     search' :: Maybe RBTreeNode -> IO (Maybe Value)
     search' Nothing = pure Nothing
     search' (Just Node {..}) = do
       case compare searchKey key of
-        LT -> readIORef leftRef >>= search'
-        EQ -> readIORef valueRef >>= (pure . Just)
-        GT -> readIORef rightRef >>= search'
+        LT -> search' =<< readIORef leftRef
+        EQ -> pure . Just =<< readIORef valueRef
+        GT -> search' =<< readIORef rightRef
 
 mkNode :: Key -> Value -> Color -> Maybe RBTreeNode -> Maybe RBTreeNode -> Maybe RBTreeNode -> IO RBTreeNode
 mkNode key value color parentNode leftNode rightNode = do
