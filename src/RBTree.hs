@@ -1,4 +1,10 @@
-module RBTree where
+module RBTree (
+  RBTree,
+  empty,
+  toList,
+  search,
+  insert
+) where
 
 import Types (Key (..), Value (..))
 import Data.IORef
@@ -9,92 +15,72 @@ import qualified Data.ByteString as BS
 
 data Color = Red | Black deriving (Eq, Show)
 
-data Links = Links { parent :: IORef RBTreeNode
-                   , left :: IORef RBTreeNode
-                   , right :: IORef RBTreeNode }
+data Links = Links { parent :: IORef (Maybe RBTreeNode)
+                   , left :: IORef (Maybe RBTreeNode)
+                   , right :: IORef (Maybe RBTreeNode) }
 
 data RBTreeNode = Node { nodeKey :: Key
                        , nodeValue :: IORef Value
                        , nodeColor :: IORef Color
                        , nodeLinks :: Links }
-                | Empty
 
 newtype RBTree = RBTree (IORef (Maybe RBTreeNode))
 
 instance Eq RBTreeNode where
-  Empty == _ = False
-  _ == Empty = False
   Node key _ _ _ == Node key' _ _ _ = key == key'
 
-grandparent :: RBTreeNode -> IO (Maybe RBTreeNode)
-grandparent Empty = pure Nothing
-grandparent (Node _ _ _ (Links parentRef _ _)) = do
+grandparentNode :: Maybe RBTreeNode -> IO (Maybe RBTreeNode)
+grandparentNode Nothing = pure Nothing
+grandparentNode (Just (Node _ _ _ (Links parentRef _ _))) = do
   parent <- readIORef parentRef
   case parent of
-    Empty -> pure Nothing
-    Node _ _ _ (Links grandparentRef _ _) -> do
+    Nothing -> pure Nothing
+    Just (Node _ _ _ (Links grandparentRef _ _)) -> do
       grandparent <- readIORef grandparentRef
-      pure $ case grandparent of
-        Empty -> Nothing
-        node -> Just node
+      pure grandparent
 
-uncle :: RBTreeNode -> IO (Maybe RBTreeNode)
-uncle Empty = pure Nothing
-uncle node@(Node _ _ _ (Links parentRef _ _)) = do
+uncleNode :: Maybe RBTreeNode -> IO (Maybe RBTreeNode)
+uncleNode Nothing = pure Nothing
+uncleNode justNode@(Just (Node _ _ _ (Links parentRef _ _))) = do
   parent <- readIORef parentRef
-  mGrandparent <- grandparent node
+  mGrandparent <- grandparentNode justNode
   case (parent, mGrandparent) of
-    (Empty, _) -> pure Nothing
-    (parentNode, Nothing) -> pure Nothing
     (parentNode, Just (Node _ _ _ (Links _ leftRef rightRef))) -> do
       left <- readIORef leftRef
       right <- readIORef rightRef
-      pure $ Just $ if left == parentNode then right else left
+      pure $ if left == parentNode then right else left
+    _ -> pure Nothing
 
 empty :: IO RBTree
 empty = RBTree <$> newIORef Nothing
 
 toList :: RBTree -> IO [(Key, Value)]
-toList (RBTree rootRef) = do
-  mRoot <- readIORef rootRef
-  case mRoot of
-    Nothing -> pure []
-    Just Empty -> pure []
-    Just node -> toList' node
-
-toList' :: RBTreeNode -> IO [(Key, Value)]
-toList' Empty = pure []
-toList' (Node k valueRef _ (Links _ leftRef rightRef)) = do
-  left <- readIORef leftRef
-  right <- readIORef rightRef
-  value <- readIORef valueRef
-  tail <- toList' left
-  let tail' = tail ++ [(k, value)]
-  rightTail <- toList' right
-  pure $ tail' ++ rightTail
+toList (RBTree rootRef) = readIORef rootRef >>= toList'
+  where 
+    toList' :: Maybe RBTreeNode -> IO [(Key, Value)]
+    toList' Nothing = pure []
+    toList' (Just (Node k valueRef _ (Links _ leftRef rightRef))) = 
+      do
+        left <- readIORef leftRef
+        right <- readIORef rightRef
+        value <- readIORef valueRef
+        tail <- toList' left
+        let tail' = tail ++ [(k, value)]
+        rightTail <- toList' right
+        pure $ tail' ++ rightTail
 
 search :: RBTree -> Key -> IO (Maybe Value)
-search (RBTree rootRef) key = do
-  mRoot <- readIORef rootRef
-  case mRoot of
-    Nothing -> pure Nothing
-    Just root -> search' root key
+search (RBTree rootRef) key = readIORef rootRef >>= search' key
+  where
+    search' :: Key -> Maybe RBTreeNode -> IO (Maybe Value)
+    search' _ Nothing = pure Nothing
+    search' searchKey (Just (Node key valueRef _ (Links _ leftRef rightRef))) = do
+      case compare searchKey key of
+        LT -> readIORef leftRef >>= search' searchKey
+        EQ -> readIORef valueRef >>= (pure . Just)
+        GT -> readIORef rightRef >>= search' searchKey
 
-search' :: RBTreeNode -> Key -> IO (Maybe Value)
-search' Empty _ = pure Nothing
-search' (Node key valueRef _ (Links _ leftRef rightRef)) searchKey = do
-  case compare searchKey key of
-    LT -> do
-      left <- readIORef leftRef
-      search' left searchKey
-    EQ -> do
-      value <- readIORef valueRef
-      pure $ Just value
-    GT -> do
-      right <- readIORef rightRef
-      search' right searchKey
-
-mkNode :: Key -> Value -> Color -> RBTreeNode -> RBTreeNode -> RBTreeNode -> IO RBTreeNode
+mkNode :: Key -> Value -> Color -> Maybe RBTreeNode -> Maybe RBTreeNode -> Maybe RBTreeNode -> IO RBTreeNode
 mkNode nodeKey value color parentNode leftNode rightNode = do
   nodeValue <- newIORef value
   nodeColor <- newIORef color
@@ -107,65 +93,61 @@ mkNode nodeKey value color parentNode leftNode rightNode = do
           pure $ Links {..}
 
 findRoot :: RBTreeNode -> IO RBTreeNode
-findRoot Empty = pure Empty
 findRoot node@(Node _ _ _ (Links parentRef _ _)) = do
   mParent <- readIORef parentRef
   case mParent of
-    Empty -> pure node
-    parent -> findRoot parent
+    Nothing -> pure node
+    Just parent -> findRoot parent
 
 insert :: RBTree -> Key -> Value -> IO ()
 insert (RBTree rootRef) k v = do
   mRoot <- readIORef rootRef
   case mRoot of
-    Nothing -> writeIORef rootRef =<< pure . Just =<< mkNode k v Black Empty Empty Empty
-    Just node -> do
+    Nothing -> writeIORef rootRef =<< pure . Just =<< mkNode k v Black Nothing Nothing Nothing
+    node -> do
       mNewNode <- insert' node k v
       case mNewNode of
         Nothing -> pure ()
         Just newNode -> do
           newRoot <- findRoot newNode
           writeIORef rootRef $ Just newRoot
-
-insert' :: RBTreeNode -> Key -> Value -> IO (Maybe RBTreeNode)
-insert' Empty k v = error "Invariant violated: insert' called with Empty root"
-insert' root@(Node key valueRef _ (Links _ leftRef rightRef)) newKey newValue = do
-  case compare newKey key of
-    EQ -> do
-      writeIORef valueRef newValue
-      pure Nothing
-    LT -> do
-      left <- readIORef leftRef
-      case left of
-        Empty -> do
-          newNode <- mkNode newKey newValue Red root Empty Empty
-          writeIORef leftRef newNode
-          insertRepair newNode
-          pure $ Just newNode
-        node -> insert' node newKey newValue
-    GT -> do
-      right <- readIORef rightRef
-      case right of
-        Empty -> do
-          newNode <- mkNode newKey newValue Red root Empty Empty
-          writeIORef rightRef newNode
-          insertRepair newNode
-          pure $ Just newNode
-        node -> insert' node newKey newValue
+  where
+    insert' :: Maybe RBTreeNode -> Key -> Value -> IO (Maybe RBTreeNode)
+    insert' (Just root@(Node key valueRef _ (Links _ leftRef rightRef))) newKey newValue = do
+      case compare newKey key of
+        EQ -> do
+          writeIORef valueRef newValue
+          pure Nothing
+        LT -> do
+          left <- readIORef leftRef
+          case left of
+            Nothing -> do
+              newNode <- mkNode newKey newValue Red (Just root) Nothing Nothing
+              writeIORef leftRef (Just newNode)
+              insertRepair newNode
+              pure $ Just newNode
+            node -> insert' node newKey newValue
+        GT -> do
+          right <- readIORef rightRef
+          case right of
+            Nothing -> do
+              newNode <- mkNode newKey newValue Red (Just root) Nothing Nothing
+              writeIORef rightRef (Just newNode)
+              insertRepair newNode
+              pure $ Just newNode
+            node -> insert' node newKey newValue
 
 insertRepair :: RBTreeNode -> IO ()
-insertRepair Empty = pure ()
 insertRepair node@(Node _ _ colorRef (Links parentRef leftRef rightRef)) = do
   parent <- readIORef parentRef
-  mUncle <- uncle node
+  mUncle <- uncleNode $ Just node
   parentColor <- case parent of
-    Empty -> pure Nothing
-    Node _ _ colorRef' _ -> do
+    Nothing -> pure Nothing
+    Just (Node _ _ colorRef' _) -> do
       color <- readIORef colorRef'
       pure $ Just (color, colorRef')
   uncleColor <- case mUncle of
     Nothing -> pure Nothing
-    Just Empty -> pure Nothing
     Just (Node _ _ colorRef' _) -> do
       color <- readIORef colorRef'
       pure $ Just (color, colorRef')
@@ -173,7 +155,7 @@ insertRepair node@(Node _ _ colorRef (Links parentRef leftRef rightRef)) = do
     (Nothing, _) -> writeIORef colorRef Black
     (Just (Black, _), _) -> pure ()
     (Just (_, parentColorRef), Just (Red, uncleColorRef)) -> do
-      mGrandparent <- grandparent node
+      mGrandparent <- grandparentNode $ Just node
       writeIORef parentColorRef Black
       writeIORef uncleColorRef Black
       case mGrandparent of
@@ -182,16 +164,16 @@ insertRepair node@(Node _ _ colorRef (Links parentRef leftRef rightRef)) = do
           writeIORef grandparentColorRef Red
           insertRepair grandparentNode
     _ -> do
-      nodeRef <- newIORef node
+      nodeRef <- newIORef $ pure node
       parentRef' <- newIORef parent
       node' <- readIORef nodeRef
       parent' <- readIORef parentRef'
-      mGrandparent <- grandparent node'
+      mGrandparent <- grandparentNode $ Just node
       case (node', parent', mGrandparent) of
         (_, _, Nothing) -> error "Invariant violated"
-        (Node  _ _ _ (Links _ nodeLeftRef nodeRightRef), 
-         parentNode@(Node _ _ _ (Links _ parentLeftRef parentRightRef)), 
-         Just grandparentNode@(Node _ _ _ (Links _ grandparentLeftRef grandparentRightRef))) -> do
+        (Just (Node  _ _ _ (Links _ nodeLeftRef nodeRightRef)), 
+         Just (Node _ _ _ (Links _ parentLeftRef parentRightRef)), 
+         Just (Node _ _ _ (Links _ grandparentLeftRef grandparentRightRef))) -> do
           parentLeft <- readIORef parentLeftRef
           parentRight <- readIORef parentRightRef
           grandparentLeft <- readIORef grandparentLeftRef
@@ -206,92 +188,79 @@ insertRepair node@(Node _ _ colorRef (Links parentRef leftRef rightRef)) = do
             nodeRight <- readIORef nodeRightRef
             writeIORef nodeRef nodeRight
           node'' <- readIORef nodeRef
-          unless (node'' == Empty) $ do
+          unless (node'' == Nothing) $ do
             let parentRef'' = case node'' of
-                                Empty -> error "Impossible"
-                                Node _ _ _ (Links ref _ _) -> ref 
-            grandparentRef'' <- newIORef =<< grandparent node''
+                                Nothing -> error "Impossible"
+                                Just (Node _ _ _ (Links ref _ _)) -> ref 
+            grandparentRef'' <- newIORef =<< grandparentNode node''
             parent'' <- readIORef parentRef''
             mGrandparent' <- readIORef grandparentRef''
             case (parent'', mGrandparent') of
-              (Node _ _ parentColorRef (Links _ parentLeftRef _), Just grandparentNode@(Node _ _ grandparentColorRef _)) -> do
+              (Just (Node _ _ parentColorRef (Links _ parentLeftRef _)), grandparent@(Just (Node _ _ grandparentColorRef _))) -> do
                 parentLeft <- readIORef parentLeftRef
                 if node'' == parentLeft
-                then rotateRight grandparentNode
-                else rotateLeft grandparentNode
+                then rotateRight grandparent
+                else rotateLeft grandparent
                 writeIORef parentColorRef Black
                 writeIORef grandparentColorRef Red
             
 
-rotateLeft :: RBTreeNode -> IO ()
-rotateLeft Empty = pure ()
-rotateLeft node@(Node _ _ _ (Links parentRef leftRef rightRef)) = do
+rotateLeft :: Maybe RBTreeNode -> IO ()
+rotateLeft Nothing = pure ()
+rotateLeft justNode@(Just (Node _ _ _ (Links parentRef leftRef rightRef))) = do
   parent <- readIORef parentRef
   left <- readIORef leftRef
   right <- readIORef rightRef
   newNodeRef <- newIORef right
   newParentRef <- newIORef parent
-  newNode@(Node _ _ _ (Links newNodeParentRef newNodeLeftRef _)) <- readIORef newNodeRef
+  newNode@(Just (Node _ _ _ (Links newNodeParentRef newNodeLeftRef _))) <- readIORef newNodeRef
   newNodeLeft <- readIORef newNodeLeftRef
   writeIORef rightRef newNodeLeft
-  writeIORef newNodeLeftRef node
+  writeIORef newNodeLeftRef justNode
   writeIORef parentRef newNode
   right' <- readIORef rightRef
   case right' of
-    Empty -> pure ()
-    Node _ _ _ (Links parentRef' _ _) -> writeIORef parentRef' node
+    Nothing -> pure ()
+    Just (Node _ _ _ (Links parentRef' _ _)) -> writeIORef parentRef' justNode
   newParent <- readIORef newParentRef
   case newParent of
-    Empty -> pure ()
-    Node _ _ _ (Links _ pLeftRef pRightRef) -> do
+    Nothing -> pure ()
+    Just (Node _ _ _ (Links _ pLeftRef pRightRef)) -> do
       pLeft <- readIORef pLeftRef
       pRight <- readIORef pRightRef
-      if node == pLeft
+      if justNode == pLeft
       then writeIORef pLeftRef newNode
-      else when (node == pRight) 
+      else when (justNode == pRight) 
                 (writeIORef pRightRef newNode)
   newParent' <- readIORef newParentRef
   writeIORef newNodeParentRef newParent'
 
-rotateRight :: RBTreeNode -> IO ()
-rotateRight Empty = pure ()
-rotateRight node@(Node _ _ _ (Links parentRef leftRef rightRef)) = do
+rotateRight :: Maybe RBTreeNode -> IO ()
+rotateRight Nothing = pure ()
+rotateRight justNode@(Just (Node _ _ _ (Links parentRef leftRef rightRef))) = do
   parent <- readIORef parentRef
   right <- readIORef rightRef
   left <- readIORef leftRef
   newNodeRef <- newIORef left
   newParentRef <- newIORef parent
-  newNode@(Node _ _ _ (Links newNodeParentRef _ newNodeRightRef)) <- readIORef newNodeRef
+  newNode@(Just (Node _ _ _ (Links newNodeParentRef _ newNodeRightRef))) <- readIORef newNodeRef
   newNodeRight <- readIORef newNodeRightRef
   writeIORef leftRef newNodeRight
-  writeIORef newNodeRightRef node
+  writeIORef newNodeRightRef justNode
   writeIORef parentRef newNode
   left' <- readIORef leftRef
   case left' of
-    Empty -> pure ()
-    Node _ _ _ (Links parentRef' _ _) -> writeIORef parentRef' node
+    Nothing -> pure ()
+    Just (Node _ _ _ (Links parentRef' _ _)) -> writeIORef parentRef' justNode
   newParent <- readIORef newParentRef
   case newParent of
-    Empty -> pure ()
-    Node _ _ _ (Links _ pLeftRef pRightRef) -> do
+    Nothing -> pure ()
+    Just (Node _ _ _ (Links _ pLeftRef pRightRef)) -> do
       pLeft <- readIORef pLeftRef
       pRight <- readIORef pRightRef
-      if node == pLeft
+      if justNode == pLeft
       then writeIORef pLeftRef newNode
-      else when (node == pRight) 
+      else when (justNode == pRight) 
                 (writeIORef pRightRef newNode)
   newParent' <- readIORef newParentRef
   writeIORef newNodeParentRef newParent'
- 
-
------- Tests
-
-inputs :: Word8 -> [(Key, Value)]
-inputs 0 = []
-inputs n = (Key $ BS.singleton n, Value $ BS.replicate 10 n) : inputs (pred n)
-
-testTree :: [(Key, Value)] -> IO RBTree 
-testTree inputs = do
-  tree <- empty
-  for_ inputs (uncurry $ insert tree)
-  pure tree
