@@ -6,9 +6,7 @@ import Types
 import Memtable
 import Data.IORef
 import Control.Applicative ((<|>))
-import Control.Monad (void)
 import Control.Monad.Reader
-import Control.Monad.Except
 import Control.Concurrent.ReadWriteLock (RWLock)
 import qualified Control.Concurrent.ReadWriteLock as RWLock
 
@@ -52,8 +50,8 @@ set k v = do
     when (byteCount >= mtMaxSize) $
       flushMemory kvsData
 
-unset :: Key -> Value -> Kvs ()
-unset k v = do
+unset :: Key -> Kvs ()
+unset k = do
   kvsData@KvsData {..} <- ask
   lift $ RWLock.withWrite rwLock $ do
     memtable' <- readIORef memtable

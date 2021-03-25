@@ -1,3 +1,5 @@
+{-# options_ghc -Wno-name-shadowing #-}
+
 module RBTree (
   RBTree,
   empty,
@@ -8,10 +10,7 @@ module RBTree (
 
 import Types (Key (..), Value (..))
 import Data.IORef
-import Data.Word
-import Data.Foldable (for_)
 import Control.Monad (when, unless)
-import qualified Data.ByteString as BS
 
 data Color = Red | Black deriving (Eq, Show)
 
@@ -95,20 +94,21 @@ findRoot node@(Node {..}) = do
     Just parent -> findRoot parent
 
 insert :: RBTree -> Key -> Value -> IO ()
-insert (RBTree rootRef) k v = do
+insert (RBTree rootRef) newKey newValue = do
   mRoot <- readIORef rootRef
   case mRoot of
-    Nothing -> writeIORef rootRef =<< pure . Just =<< mkNode k v Black Nothing Nothing Nothing
+    Nothing -> writeIORef rootRef =<< pure . Just =<< mkNode newKey newValue Black Nothing Nothing Nothing
     node -> do
-      mNewNode <- insert' node k v
+      mNewNode <- insert' node
       case mNewNode of
         Nothing -> pure ()
         Just newNode -> do
           newRoot <- findRoot newNode
           writeIORef rootRef $ Just newRoot
   where
-    insert' :: Maybe RBTreeNode -> Key -> Value -> IO (Maybe RBTreeNode)
-    insert' (Just root@(Node {..})) newKey newValue = do
+    insert' :: Maybe RBTreeNode -> IO (Maybe RBTreeNode)
+    insert' Nothing = pure Nothing
+    insert' (Just root@(Node {..})) = do
       case compare newKey key of
         EQ -> do
           writeIORef valueRef newValue
@@ -121,7 +121,7 @@ insert (RBTree rootRef) k v = do
               writeIORef leftRef (Just newNode)
               insertRepair newNode
               pure $ Just newNode
-            node -> insert' node newKey newValue
+            node -> insert' node
         GT -> do
           right <- readIORef rightRef
           case right of
@@ -130,7 +130,7 @@ insert (RBTree rootRef) k v = do
               writeIORef rightRef (Just newNode)
               insertRepair newNode
               pure $ Just newNode
-            node -> insert' node newKey newValue
+            node -> insert' node
 
 insertRepair :: RBTreeNode -> IO ()
 insertRepair node@(Node {..}) = do
@@ -165,7 +165,6 @@ insertRepair node@(Node {..}) = do
       parent' <- readIORef parentRef'
       mGrandparent <- grandparentNode $ Just node
       case (node', parent', mGrandparent) of
-        (_, _, Nothing) -> error "Invariant violated"
         (Just (Node  _ _ _ _ nodeLeftRef nodeRightRef), 
          Just (Node _ _ _ _ parentLeftRef parentRightRef), 
          Just (Node _ _ _ _ grandparentLeftRef grandparentRightRef)) -> do
@@ -198,13 +197,14 @@ insertRepair node@(Node {..}) = do
                 else rotateLeft grandparent
                 writeIORef parentColorRef Black
                 writeIORef grandparentColorRef Red
+              _ -> error "Invariant violated"
+        _ -> error "Invariant violated"
             
 
 rotateLeft :: Maybe RBTreeNode -> IO ()
 rotateLeft Nothing = pure ()
 rotateLeft justNode@(Just Node {..}) = do
   parent <- readIORef parentRef
-  left <- readIORef leftRef
   right <- readIORef rightRef
   newNodeRef <- newIORef right
   newParentRef <- newIORef parent
@@ -234,7 +234,6 @@ rotateRight :: Maybe RBTreeNode -> IO ()
 rotateRight Nothing = pure ()
 rotateRight justNode@(Just Node {..}) = do
   parent <- readIORef parentRef
-  right <- readIORef rightRef
   left <- readIORef leftRef
   newNodeRef <- newIORef left
   newParentRef <- newIORef parent

@@ -7,8 +7,8 @@ type Writer = ()
 
 data CommitLog = CommitLog { writer :: Writer }
 
-resume :: String -> IO (Memtable, CommitLog)
-resume path = do
+resume :: FilePath -> IO (Memtable, CommitLog)
+resume _ = do
   -- if path exists
   -- load the memtable
   -- return commit log
