@@ -1,6 +1,6 @@
 module Memtable (
   Memtable,
-  empty,
+  Memtable.empty,
   set,
   get,
   unset,
@@ -9,6 +9,7 @@ module Memtable (
 ) where
 
 import Types (Key, Value, Entry)
+import RBTree
 
 type BalancedTree k v = [(k,v)]
 
