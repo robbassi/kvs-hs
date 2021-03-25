@@ -208,7 +208,11 @@ rotateLeft justNode@(Just Node {..}) = do
   right <- readIORef rightRef
   newNodeRef <- newIORef right
   newParentRef <- newIORef parent
-  newNode@(Just (Node _ _ _ newNodeParentRef newNodeLeftRef _)) <- readIORef newNodeRef
+  newNode@(Just (Node _ _ _ newNodeParentRef newNodeLeftRef _)) <- do
+    mNode <- readIORef newNodeRef
+    case mNode of
+      Nothing -> error "Invariant violated"
+      node -> pure $ node
   newNodeLeft <- readIORef newNodeLeftRef
   writeIORef rightRef newNodeLeft
   writeIORef newNodeLeftRef justNode
@@ -237,7 +241,11 @@ rotateRight justNode@(Just Node {..}) = do
   left <- readIORef leftRef
   newNodeRef <- newIORef left
   newParentRef <- newIORef parent
-  newNode@(Just (Node _ _ _ newNodeParentRef _ newNodeRightRef)) <- readIORef newNodeRef
+  newNode@(Just (Node _ _ _ newNodeParentRef _ newNodeRightRef)) <- do
+    mNode <- readIORef newNodeRef
+    case mNode of
+      Nothing -> error "Invariant violated"
+      node -> pure $ node
   newNodeRight <- readIORef newNodeRightRef
   writeIORef leftRef newNodeRight
   writeIORef newNodeRightRef justNode
