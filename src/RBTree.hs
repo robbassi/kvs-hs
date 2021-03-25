@@ -67,15 +67,15 @@ toList (RBTree rootRef) = readIORef rootRef >>= toList'
         pure $ tail' ++ rightTail
 
 search :: RBTree -> Key -> IO (Maybe Value)
-search (RBTree rootRef) key = readIORef rootRef >>= search' key
+search (RBTree rootRef) searchKey = readIORef rootRef >>= search'
   where
-    search' :: Key -> Maybe RBTreeNode -> IO (Maybe Value)
-    search' _ Nothing = pure Nothing
-    search' searchKey (Just Node {..}) = do
+    search' :: Maybe RBTreeNode -> IO (Maybe Value)
+    search' Nothing = pure Nothing
+    search' (Just Node {..}) = do
       case compare searchKey key of
-        LT -> readIORef leftRef >>= search' searchKey
+        LT -> readIORef leftRef >>= search'
         EQ -> readIORef valueRef >>= (pure . Just)
-        GT -> readIORef rightRef >>= search' searchKey
+        GT -> readIORef rightRef >>= search'
 
 mkNode :: Key -> Value -> Color -> Maybe RBTreeNode -> Maybe RBTreeNode -> Maybe RBTreeNode -> IO RBTreeNode
 mkNode key value color parentNode leftNode rightNode = do
