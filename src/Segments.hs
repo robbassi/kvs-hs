@@ -9,8 +9,8 @@ data Segments =
   Segments { compactionThread :: ()
            , sstables :: [SSTable] }
 
-fromPath :: String -> IO Segments
-fromPath path = do
+fromPath :: FilePath -> IO Segments
+fromPath _ = do
   -- load the segments from disk
   -- sort the segments
   pure $ Segments () []

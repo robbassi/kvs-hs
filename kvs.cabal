@@ -23,6 +23,8 @@ common com
     , bytestring
     , mtl
     , concurrent-extra
+  ghc-options:
+    -Wall
 
 executable kvs
   import:
@@ -45,7 +47,7 @@ test-suite test
     Types
     RBTree
     RBTreeSpec
-    TestInstances
+    Orphans
   hs-source-dirs:
     src
     test
