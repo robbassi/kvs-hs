@@ -9,7 +9,7 @@ module RBTree (
 ) where
 
 import Types (Key (..), Value (..))
-import Data.IORef
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Control.Monad (when, unless)
 
 data Color = Red | Black deriving (Eq, Show)

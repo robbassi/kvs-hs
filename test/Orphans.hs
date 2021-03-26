@@ -1,4 +1,9 @@
-module TestInstances where
+{-# options_ghc 
+    -Wno-unused-imports 
+    -Wno-orphans
+#-}
+
+module Orphans where
 
 import Types
 import Test.QuickCheck

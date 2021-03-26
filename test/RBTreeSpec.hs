@@ -1,12 +1,14 @@
+{-# options_ghc -Wno-unused-imports #-}
+
 module RBTreeSpec where
 
 import Types
-import RBTree
-import TestInstances
-import Test.Hspec
-import Test.QuickCheck
-import Test.QuickCheck.Monadic
-import Data.ByteString.Char8 (pack)
+import Orphans
+import RBTree (RBTree)
+import qualified RBTree
+import Test.Hspec (SpecWith, describe, it)
+import Test.QuickCheck (Gen, Property, generate, arbitrary, property, withMaxSuccess)
+import Test.QuickCheck.Monadic (assert, monadicIO, run)
 import Data.List (sortOn, nubBy)
 import Data.Foldable (for_)
 import Data.Traversable (for)
