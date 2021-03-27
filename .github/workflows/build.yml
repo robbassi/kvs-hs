@@ -13,7 +13,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - uses: mrkkrp/ormolu-action@v2
+    - name: Formatter
+      uses: mrkkrp/ormolu-action@v2
+    - name: Linter
+      uses: domdere/haskell-lint-action@v1.0.2
     - uses: actions/setup-haskell@v1
       with:
         ghc-version: '8.10.2'
