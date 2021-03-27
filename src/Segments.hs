@@ -1,13 +1,14 @@
 module Segments where
 
-import Types (Key, Value)
 import Memtable
+import Types (Key, Value)
 
 type SSTable = ()
 
-data Segments =
-  Segments { compactionThread :: ()
-           , sstables :: [SSTable] }
+data Segments = Segments
+  { compactionThread :: (),
+    sstables :: [SSTable]
+  }
 
 fromPath :: FilePath -> IO Segments
 fromPath _ = do
@@ -18,7 +19,7 @@ fromPath _ = do
 search :: Segments -> Key -> IO (Maybe Value)
 search = undefined
 
-flush :: Segments -> Memtable ->  IO ()
+flush :: Segments -> Memtable -> IO ()
 flush = undefined
 
 startCompactionThread :: IO ()

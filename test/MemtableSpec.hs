@@ -1,17 +1,17 @@
 module MemtableSpec where
 
-import Types
 import Common
+import qualified Data.ByteString as BS
+import Data.Coerce (coerce)
+import Data.Foldable (for_)
+import Data.Maybe (fromJust)
+import Data.Traversable (for)
 import Memtable (Memtable)
 import qualified Memtable
 import Test.Hspec (SpecWith, describe, it)
 import Test.QuickCheck (Property, generate, property, withMaxSuccess)
 import Test.QuickCheck.Monadic (assert, monadicIO, run)
-import Data.Coerce (coerce)
-import Data.Foldable (for_)
-import Data.Traversable (for)
-import Data.Maybe (fromJust)
-import qualified Data.ByteString as BS
+import Types
 
 buildMemtable :: IO ([Entry], Memtable)
 buildMemtable = do
@@ -23,8 +23,9 @@ buildMemtable = do
 entrySize :: Entry -> Int
 entrySize (key, Tombstone) = BS.length $ coerce key
 entrySize (key, (Value valueBytes)) = keySize + valueSize
-  where keySize = BS.length $ coerce key
-        valueSize = BS.length valueBytes
+  where
+    keySize = BS.length $ coerce key
+    valueSize = BS.length valueBytes
 
 prop_minByteCount :: Property
 prop_minByteCount = monadicIO $ do

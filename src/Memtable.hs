@@ -1,23 +1,25 @@
-module Memtable (
-  Memtable,
-  Memtable.empty,
-  set,
-  get,
-  unset,
-  entries,
-  approximateBytes
-) where
+module Memtable
+  ( Memtable,
+    Memtable.empty,
+    set,
+    get,
+    unset,
+    entries,
+    approximateBytes,
+  )
+where
 
-import Types (Key (..), Value (..), Entry)
+import qualified Data.ByteString as BS
+import Data.Coerce (coerce)
+import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
 import RBTree (RBTree)
 import qualified RBTree
-import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
-import Data.Coerce (coerce)
-import qualified Data.ByteString as BS
+import Types (Entry, Key (..), Value (..))
 
-data Memtable =
-  Memtable { memBytes :: IORef Int
-           , memTree :: IORef RBTree }
+data Memtable = Memtable
+  { memBytes :: IORef Int,
+    memTree :: IORef RBTree
+  }
 
 empty :: IO Memtable
 empty = do

@@ -1,25 +1,28 @@
-{-# options_ghc -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
-module RBTree (
-  RBTree,
-  empty,
-  toList,
-  search,
-  insert
-) where
+module RBTree
+  ( RBTree,
+    empty,
+    toList,
+    search,
+    insert,
+  )
+where
 
-import Types (Key (..), Value (..))
+import Control.Monad (unless, when)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
-import Control.Monad (when, unless)
+import Types (Key (..), Value (..))
 
 data Color = Red | Black deriving (Eq, Show)
 
-data RBTreeNode = Node { key :: Key
-                       , valueRef :: IORef Value
-                       , colorRef :: IORef Color
-                       , parentRef :: IORef (Maybe RBTreeNode)
-                       , leftRef :: IORef (Maybe RBTreeNode)
-                       , rightRef :: IORef (Maybe RBTreeNode) }
+data RBTreeNode = Node
+  { key :: Key,
+    valueRef :: IORef Value,
+    colorRef :: IORef Color,
+    parentRef :: IORef (Maybe RBTreeNode),
+    leftRef :: IORef (Maybe RBTreeNode),
+    rightRef :: IORef (Maybe RBTreeNode)
+  }
 
 newtype RBTree = RBTree (IORef (Maybe RBTreeNode))
 
@@ -53,10 +56,10 @@ empty = RBTree <$> newIORef Nothing
 
 toList :: RBTree -> IO [(Key, Value)]
 toList (RBTree rootRef) = toList' =<< readIORef rootRef
-  where 
+  where
     toList' :: Maybe RBTreeNode -> IO [(Key, Value)]
     toList' Nothing = pure []
-    toList' (Just Node {..}) = 
+    toList' (Just Node {..}) =
       do
         left <- readIORef leftRef
         right <- readIORef rightRef
@@ -165,41 +168,41 @@ insertRepair node@(Node {..}) = do
       parent' <- readIORef parentRef'
       mGrandparent <- grandparentNode $ Just node
       case (node', parent', mGrandparent) of
-        (Just (Node  _ _ _ _ nodeLeftRef nodeRightRef), 
-         Just (Node _ _ _ _ parentLeftRef parentRightRef), 
-         Just (Node _ _ _ _ grandparentLeftRef grandparentRightRef)) -> do
-          parentLeft <- readIORef parentLeftRef
-          parentRight <- readIORef parentRightRef
-          grandparentLeft <- readIORef grandparentLeftRef
-          grandparentRight <- readIORef grandparentRightRef
-          if node' == parentRight && parent' == grandparentLeft
-          then do
-            rotateLeft parent'
-            nodeLeft <- readIORef nodeLeftRef
-            writeIORef nodeRef nodeLeft
-          else when (node' == parentLeft && parent' == grandparentRight) $ do
-            rotateRight parent'
-            nodeRight <- readIORef nodeRightRef
-            writeIORef nodeRef nodeRight
-          node'' <- readIORef nodeRef
-          unless (node'' == Nothing) $ do
-            let parentRef'' = case node'' of
-                                Nothing -> error "Impossible"
-                                Just Node {..} -> parentRef 
-            grandparentRef'' <- newIORef =<< grandparentNode node''
-            parent'' <- readIORef parentRef''
-            mGrandparent' <- readIORef grandparentRef''
-            case (parent'', mGrandparent') of
-              (Just (Node _ _ parentColorRef _ parentLeftRef _), grandparent@(Just (Node _ _ grandparentColorRef _ _ _))) -> do
-                parentLeft <- readIORef parentLeftRef
-                if node'' == parentLeft
-                then rotateRight grandparent
-                else rotateLeft grandparent
-                writeIORef parentColorRef Black
-                writeIORef grandparentColorRef Red
-              _ -> error "Invariant violated"
+        ( Just (Node _ _ _ _ nodeLeftRef nodeRightRef),
+          Just (Node _ _ _ _ parentLeftRef parentRightRef),
+          Just (Node _ _ _ _ grandparentLeftRef grandparentRightRef)
+          ) -> do
+            parentLeft <- readIORef parentLeftRef
+            parentRight <- readIORef parentRightRef
+            grandparentLeft <- readIORef grandparentLeftRef
+            grandparentRight <- readIORef grandparentRightRef
+            if node' == parentRight && parent' == grandparentLeft
+              then do
+                rotateLeft parent'
+                nodeLeft <- readIORef nodeLeftRef
+                writeIORef nodeRef nodeLeft
+              else when (node' == parentLeft && parent' == grandparentRight) $ do
+                rotateRight parent'
+                nodeRight <- readIORef nodeRightRef
+                writeIORef nodeRef nodeRight
+            node'' <- readIORef nodeRef
+            unless (node'' == Nothing) $ do
+              let parentRef'' = case node'' of
+                    Nothing -> error "Impossible"
+                    Just Node {..} -> parentRef
+              grandparentRef'' <- newIORef =<< grandparentNode node''
+              parent'' <- readIORef parentRef''
+              mGrandparent' <- readIORef grandparentRef''
+              case (parent'', mGrandparent') of
+                (Just (Node _ _ parentColorRef _ parentLeftRef _), grandparent@(Just (Node _ _ grandparentColorRef _ _ _))) -> do
+                  parentLeft <- readIORef parentLeftRef
+                  if node'' == parentLeft
+                    then rotateRight grandparent
+                    else rotateLeft grandparent
+                  writeIORef parentColorRef Black
+                  writeIORef grandparentColorRef Red
+                _ -> error "Invariant violated"
         _ -> error "Invariant violated"
-            
 
 rotateLeft :: Maybe RBTreeNode -> IO ()
 rotateLeft Nothing = pure ()
@@ -228,9 +231,11 @@ rotateLeft justNode@(Just Node {..}) = do
       pLeft <- readIORef pLeftRef
       pRight <- readIORef pRightRef
       if justNode == pLeft
-      then writeIORef pLeftRef newNode
-      else when (justNode == pRight) 
-                (writeIORef pRightRef newNode)
+        then writeIORef pLeftRef newNode
+        else
+          when
+            (justNode == pRight)
+            (writeIORef pRightRef newNode)
   newParent' <- readIORef newParentRef
   writeIORef newNodeParentRef newParent'
 
@@ -261,8 +266,10 @@ rotateRight justNode@(Just Node {..}) = do
       pLeft <- readIORef pLeftRef
       pRight <- readIORef pRightRef
       if justNode == pLeft
-      then writeIORef pLeftRef newNode
-      else when (justNode == pRight) 
-                (writeIORef pRightRef newNode)
+        then writeIORef pLeftRef newNode
+        else
+          when
+            (justNode == pRight)
+            (writeIORef pRightRef newNode)
   newParent' <- readIORef newParentRef
   writeIORef newNodeParentRef newParent'

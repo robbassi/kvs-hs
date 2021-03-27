@@ -10,6 +10,7 @@ data Value = Value ByteString | Tombstone
 
 type Entry = (Key, Value)
 
-data KvsConfig =
-  KvsConfig { commitLogPath :: String
-            , segmentPath :: String }
+data KvsConfig = KvsConfig
+  { commitLogPath :: String,
+    segmentPath :: String
+  }

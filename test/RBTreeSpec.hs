@@ -1,16 +1,16 @@
 module RBTreeSpec where
 
-import Types
 import Common
+import Data.Foldable (for_)
+import Data.List (sortOn)
+import Data.Maybe (fromJust)
+import Data.Traversable (for)
 import RBTree (RBTree)
 import qualified RBTree
 import Test.Hspec (SpecWith, describe, it)
 import Test.QuickCheck (Property, generate, property, withMaxSuccess)
 import Test.QuickCheck.Monadic (assert, monadicIO, run)
-import Data.List (sortOn)
-import Data.Foldable (for_)
-import Data.Traversable (for)
-import Data.Maybe (fromJust)
+import Types
 
 buildTree :: IO ([(Key, Value)], RBTree)
 buildTree = do
@@ -34,7 +34,7 @@ prop_association = monadicIO $ do
   assert $ valuesIn == valuesOut
 
 tests :: SpecWith ()
-tests =  describe "RBTree" $ do
+tests = describe "RBTree" $ do
   it "insert maintains order of keys" $ do
     property $ withMaxSuccess 10000 prop_order
   it "search returns the correct values" $ do
