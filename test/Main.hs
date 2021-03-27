@@ -1,8 +1,8 @@
 module Main where
 
-import Test.Hspec
-import qualified RBTreeSpec
 import qualified MemtableSpec
+import qualified RBTreeSpec
+import Test.Hspec
 
 main :: IO Bool
 main = do

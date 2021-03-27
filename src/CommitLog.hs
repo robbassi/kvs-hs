@@ -6,7 +6,7 @@ import Types (Key, Value)
 
 type Writer = ()
 
-data CommitLog = CommitLog { writer :: Writer }
+data CommitLog = CommitLog {writer :: Writer}
 
 resume :: FilePath -> IO (Memtable, CommitLog)
 resume _ = do
