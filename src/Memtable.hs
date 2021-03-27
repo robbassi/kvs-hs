@@ -61,9 +61,7 @@ entries :: Memtable -> IO [Entry]
 entries Memtable {..} = RBTree.toList =<< readIORef memTree
 
 approximateBytes :: Memtable -> IO Int
-approximateBytes Memtable {..} = do
-  bytes <- readIORef memBytes
-  pure bytes
+approximateBytes Memtable {..} = readIORef memBytes
 
 atomicAdd :: IORef Int -> Int -> IO ()
 atomicAdd ref n = do

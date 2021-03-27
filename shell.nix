@@ -10,5 +10,6 @@ hsPkgs.shellFor {
     hsPkgs.ghcid
     hsPkgs.fast-tags
     hsPkgs.ormolu
+    hsPkgs.hlint
   ];
 }

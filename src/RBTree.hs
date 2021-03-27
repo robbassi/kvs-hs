@@ -11,6 +11,7 @@ where
 
 import Control.Monad (unless, when)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import Data.Maybe (isNothing)
 import Types (Key (..), Value (..))
 
 data Color = Red | Black deriving (Eq, Show)
@@ -35,9 +36,7 @@ grandparentNode (Just Node {..}) = do
   parent <- readIORef parentRef
   case parent of
     Nothing -> pure Nothing
-    Just (Node _ _ _ grandparentRef _ _) -> do
-      grandparent <- readIORef grandparentRef
-      pure grandparent
+    Just (Node _ _ _ grandparentRef _ _) -> readIORef grandparentRef
 
 uncleNode :: Maybe RBTreeNode -> IO (Maybe RBTreeNode)
 uncleNode Nothing = pure Nothing
@@ -77,7 +76,7 @@ search (RBTree rootRef) searchKey = search' =<< readIORef rootRef
     search' (Just Node {..}) = do
       case compare searchKey key of
         LT -> search' =<< readIORef leftRef
-        EQ -> pure . Just =<< readIORef valueRef
+        EQ -> Just <$> readIORef valueRef
         GT -> search' =<< readIORef rightRef
 
 mkNode :: Key -> Value -> Color -> Maybe RBTreeNode -> Maybe RBTreeNode -> Maybe RBTreeNode -> IO RBTreeNode
@@ -90,7 +89,7 @@ mkNode key value color parentNode leftNode rightNode = do
   pure $ Node {..}
 
 findRoot :: RBTreeNode -> IO RBTreeNode
-findRoot node@(Node {..}) = do
+findRoot node@Node {..} = do
   mParent <- readIORef parentRef
   case mParent of
     Nothing -> pure node
@@ -100,7 +99,7 @@ insert :: RBTree -> Key -> Value -> IO ()
 insert (RBTree rootRef) newKey newValue = do
   mRoot <- readIORef rootRef
   case mRoot of
-    Nothing -> writeIORef rootRef =<< pure . Just =<< mkNode newKey newValue Black Nothing Nothing Nothing
+    Nothing -> writeIORef rootRef =<< (Just <$> mkNode newKey newValue Black Nothing Nothing Nothing)
     node -> do
       mNewNode <- insert' node
       case mNewNode of
@@ -111,7 +110,7 @@ insert (RBTree rootRef) newKey newValue = do
   where
     insert' :: Maybe RBTreeNode -> IO (Maybe RBTreeNode)
     insert' Nothing = pure Nothing
-    insert' (Just root@(Node {..})) = do
+    insert' (Just root@Node {..}) = do
       case compare newKey key of
         EQ -> do
           writeIORef valueRef newValue
@@ -136,7 +135,7 @@ insert (RBTree rootRef) newKey newValue = do
             node -> insert' node
 
 insertRepair :: RBTreeNode -> IO ()
-insertRepair node@(Node {..}) = do
+insertRepair node@Node {..} = do
   parent <- readIORef parentRef
   mUncle <- uncleNode $ Just node
   parentColor <- case parent of
@@ -186,7 +185,7 @@ insertRepair node@(Node {..}) = do
                 nodeRight <- readIORef nodeRightRef
                 writeIORef nodeRef nodeRight
             node'' <- readIORef nodeRef
-            unless (node'' == Nothing) $ do
+            unless (isNothing node'') $ do
               let parentRef'' = case node'' of
                     Nothing -> error "Impossible"
                     Just Node {..} -> parentRef
@@ -215,7 +214,7 @@ rotateLeft justNode@(Just Node {..}) = do
     mNode <- readIORef newNodeRef
     case mNode of
       Nothing -> error "Invariant violated"
-      node -> pure $ node
+      node -> pure node
   newNodeLeft <- readIORef newNodeLeftRef
   writeIORef rightRef newNodeLeft
   writeIORef newNodeLeftRef justNode
@@ -250,7 +249,7 @@ rotateRight justNode@(Just Node {..}) = do
     mNode <- readIORef newNodeRef
     case mNode of
       Nothing -> error "Invariant violated"
-      node -> pure $ node
+      node -> pure node
   newNodeRight <- readIORef newNodeRightRef
   writeIORef leftRef newNodeRight
   writeIORef newNodeRightRef justNode

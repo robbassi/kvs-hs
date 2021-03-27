@@ -6,7 +6,7 @@ import Types (Key, Value)
 
 type Writer = ()
 
-data CommitLog = CommitLog {writer :: Writer}
+data CommitLog = CommitLog {commitLogPath :: FilePath, commitLogWriter :: Writer}
 
 resume :: FilePath -> IO (Memtable, CommitLog)
 resume _ = do
@@ -14,7 +14,7 @@ resume _ = do
   -- load the memtable
   -- return commit log
   memtable <- Memtable.empty
-  pure $ (memtable, CommitLog ())
+  pure (memtable, CommitLog "" ())
 
 set :: CommitLog -> Key -> Value -> IO ()
 set = undefined

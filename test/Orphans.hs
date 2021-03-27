@@ -12,7 +12,7 @@ instance Arbitrary Key where
 
 instance Arbitrary Value where
   arbitrary =
-    frequency $
+    frequency
       [ (9, Value <$> arbitrary),
         (1, pure Tombstone)
       ]

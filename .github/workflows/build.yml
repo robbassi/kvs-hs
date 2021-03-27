@@ -12,8 +12,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: 'Set up HLint'
+      uses: rwe/actions-hlint-setup@v1
+      with:
+        version: '3.2.1'
     - uses: actions/checkout@v2
-    - uses: mrkkrp/ormolu-action@v2
+    - name: 'Run Ormolu'
+      uses: mrkkrp/ormolu-action@v2
+    - name: 'Run HLint'
+      uses: rwe/actions-hlint-run@v2
+      with:
+        path: '["src/", "test/"]'
+        fail-on: status
     - uses: actions/setup-haskell@v1
       with:
         ghc-version: '8.10.2'

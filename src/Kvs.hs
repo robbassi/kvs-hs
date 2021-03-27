@@ -30,7 +30,7 @@ mkKvsData KvsConfig {..} = do
   memtable <- newIORef memtable'
   segments <- Segments.fromPath segmentPath
   rwLock <- RWLock.new
-  void $ Segments.startCompactionThread
+  void Segments.startCompactionThread
   pure $ KvsData {..}
 
 get :: Key -> Kvs (Maybe Value)
