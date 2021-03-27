@@ -22,7 +22,7 @@ buildMemtable = do
 
 entrySize :: Entry -> Int
 entrySize (key, Tombstone) = BS.length $ coerce key
-entrySize (key, (Value valueBytes)) = keySize + valueSize
+entrySize (key, Value valueBytes) = keySize + valueSize
   where
     keySize = BS.length $ coerce key
     valueSize = BS.length valueBytes
