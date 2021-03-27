@@ -45,12 +45,14 @@ test-suite test
     Main.hs
   other-modules:
     Types
+    Common
     RBTree
     RBTreeSpec
+    MemtableSpec
     Orphans
   hs-source-dirs:
-    src
     test
+    src
   build-depends:
     , hspec
     , QuickCheck

@@ -1,6 +1,7 @@
 module CommitLog where
 
-import Memtable (Memtable, empty)
+import Memtable (Memtable)
+import qualified Memtable
 import Types (Key, Value)
 
 type Writer = ()
@@ -12,7 +13,8 @@ resume _ = do
   -- if path exists
   -- load the memtable
   -- return commit log
-  pure $ (empty, CommitLog ())
+  memtable <- Memtable.empty
+  pure $ (memtable, CommitLog ())
 
 set :: CommitLog -> Key -> Value -> IO ()
 set = undefined
