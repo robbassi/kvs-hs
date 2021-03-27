@@ -1,22 +1,16 @@
-{-# options_ghc -Wno-unused-imports #-}
-
 module RBTreeSpec where
 
 import Types
-import Orphans
+import Common
 import RBTree (RBTree)
 import qualified RBTree
 import Test.Hspec (SpecWith, describe, it)
-import Test.QuickCheck (Gen, Property, generate, arbitrary, property, withMaxSuccess)
+import Test.QuickCheck (Property, generate, property, withMaxSuccess)
 import Test.QuickCheck.Monadic (assert, monadicIO, run)
-import Data.List (sortOn, nubBy)
+import Data.List (sortOn)
 import Data.Foldable (for_)
 import Data.Traversable (for)
-import Data.Function (on)
 import Data.Maybe (fromJust)
-
-entriesUniqueByKey :: Gen [(Key, Value)]
-entriesUniqueByKey = nubBy ((==) `on` fst) <$> arbitrary
 
 buildTree :: IO ([(Key, Value)], RBTree)
 buildTree = do

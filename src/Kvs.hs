@@ -65,5 +65,5 @@ flushMemory :: KvsData -> IO ()
 flushMemory KvsData {..} = do
   memtable' <- readIORef memtable
   void $ Segments.flush segments memtable'
-  writeIORef memtable $ Memtable.empty
+  writeIORef memtable =<< Memtable.empty
   void $ CommitLog.purge commitLog
