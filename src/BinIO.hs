@@ -1,46 +1,48 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module BinIO (
-  -- * The KVReader API
-  KVReader,
-  withKVReader,
-  hasNext,
-  seek,
-  skip,
-  skipKey,
-  skipValue,
-  readKeySize,
-  readValueSize,
-  readKey,
-  readValue,
-  readEntry,
+module BinIO
+  ( -- * The KVReader API
+    KVReader,
+    withKVReader,
+    hasNext,
+    seek,
+    skip,
+    skipKey,
+    skipValue,
+    readKeySize,
+    readValueSize,
+    readKey,
+    readValue,
+    readEntry,
 
-  -- * The KVWriter API
-  KVWriter,
-  withKVWriter,
-  writeKey,
-  writeValue,
-  writeEntry,
-  sync,
-  BinIO.truncate,
+    -- * The KVWriter API
+    KVWriter,
+    withKVWriter,
+    writeKey,
+    writeValue,
+    writeEntry,
+    sync,
+    BinIO.truncate,
 
-  -- * Helpers
-  kvFold,
-  kvFoldIO,
-  kvIterIO
-) where
+    -- * Helpers
+    kvFold,
+    kvFoldIO,
+    kvIterIO,
+  )
+where
 
-import Types
-import Data.Binary
-import Data.Int
 import Control.Monad.Reader
+import Data.Binary
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BL
+import Data.Int
 import System.IO
 import System.Posix.IO (handleToFd)
 import System.Posix.Unistd (fileSynchronise)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BL
+import Types
 
 type KVReader = ReaderT Handle IO
+
 type KVWriter = ReaderT Handle IO ()
 
 tombstoneSize :: Int16
@@ -52,8 +54,8 @@ kvFoldIO path f = withKVReader path . loop
     loop acc = do
       continue <- hasNext
       if continue
-      then readEntry >>= liftIO . flip f acc >>= loop
-      else pure acc
+        then readEntry >>= liftIO . flip f acc >>= loop
+        else pure acc
 
 kvIterIO :: FilePath -> (Entry -> IO ()) -> IO ()
 kvIterIO path f = kvFoldIO path (\kv _ -> f kv) ()
@@ -64,8 +66,8 @@ kvFold path f = withKVReader path . loop
     loop acc = do
       continue <- hasNext
       if continue
-      then readEntry >>= pure . flip f acc >>= loop
-      else pure acc
+        then readEntry >>= pure . flip f acc >>= loop
+        else pure acc
 
 -- KVReader API
 
