@@ -35,6 +35,7 @@ import Control.Monad.Reader
 import Data.Binary
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
+import Data.Functor ((<&>))
 import Data.Int
 import System.IO
 import System.Posix.IO (handleToFd)
@@ -66,7 +67,7 @@ kvFold path f = withKVReader path . loop
     loop acc = do
       continue <- hasNext
       if continue
-        then readEntry >>= pure . flip f acc >>= loop
+        then (readEntry <&> flip f acc) >>= loop
         else pure acc
 
 -- KVReader API
@@ -75,7 +76,7 @@ withKVReader :: FilePath -> KVReader a -> IO a
 withKVReader path = withFile path ReadMode . runReaderT
 
 hasNext :: KVReader Bool
-hasNext = ask >>= liftIO . hIsEOF >>= pure . not
+hasNext = (ask >>= liftIO . hIsEOF) <&> not
 
 seek :: Integer -> KVReader ()
 seek offset = do
@@ -92,14 +93,14 @@ readKeySize = do
   handle <- ask
   liftIO $ do
     sizeBytes <- BL.hGet handle 2
-    pure $ fromEnum $ (decode sizeBytes :: Word16)
+    pure $ fromEnum (decode sizeBytes :: Word16)
 
 readValueSize :: KVReader Int
 readValueSize = do
   handle <- ask
   liftIO $ do
     sizeBytes <- BL.hGet handle 2
-    pure $ fromEnum $ (decode sizeBytes :: Int16)
+    pure $ fromEnum (decode sizeBytes :: Int16)
 
 skipKey :: KVReader ()
 skipKey = readKeySize >>= skip . toInteger
@@ -121,7 +122,7 @@ readValue = do
     valueSize <- BL.hGet handle 2
     case decode valueSize of
       n | n == tombstoneSize -> pure Tombstone
-      n -> Value <$> (BS.hGet handle $ fromEnum n)
+      n -> Value <$> BS.hGet handle (fromEnum n)
 
 readEntry :: KVReader Entry
 readEntry = (,) <$> readKey <*> readValue
