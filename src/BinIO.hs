@@ -49,27 +49,6 @@ type KVWriter = ReaderT Handle IO ()
 tombstoneSize :: Int16
 tombstoneSize = -1
 
-kvFoldIO :: FilePath -> (Entry -> a -> IO a) -> a -> IO a
-kvFoldIO path f = withKVReader path . loop
-  where
-    loop acc = do
-      continue <- hasNext
-      if continue
-        then readEntry >>= liftIO . flip f acc >>= loop
-        else pure acc
-
-kvIterIO :: FilePath -> (Entry -> IO ()) -> IO ()
-kvIterIO path f = kvFoldIO path (\kv _ -> f kv) ()
-
-kvFold :: FilePath -> (Entry -> a -> a) -> a -> IO a
-kvFold path f = withKVReader path . loop
-  where
-    loop acc = do
-      continue <- hasNext
-      if continue
-        then (readEntry <&> flip f acc) >>= loop
-        else pure acc
-
 -- KVReader API
 
 withKVReader :: FilePath -> KVReader a -> IO a
@@ -170,3 +149,26 @@ truncate = do
   liftIO $ do
     hSeek handle AbsoluteSeek 0
     hSetFileSize handle 0
+
+-- Helpers
+
+kvFold :: FilePath -> (Entry -> a -> a) -> a -> IO a
+kvFold path f = withKVReader path . loop
+  where
+    loop acc = do
+      continue <- hasNext
+      if continue
+        then (readEntry <&> flip f acc) >>= loop
+        else pure acc
+
+kvFoldIO :: FilePath -> (Entry -> a -> IO a) -> a -> IO a
+kvFoldIO path f = withKVReader path . loop
+  where
+    loop acc = do
+      continue <- hasNext
+      if continue
+        then readEntry >>= liftIO . flip f acc >>= loop
+        else pure acc
+
+kvIterIO :: FilePath -> (Entry -> IO ()) -> IO ()
+kvIterIO path f = kvFoldIO path (\kv _ -> f kv) ()
