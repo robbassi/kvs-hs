@@ -13,13 +13,16 @@ common com
     Memtable
     Segments
     Types
+    BinIO
   default-extensions:
     RecordWildCards
     OverloadedStrings
     DoAndIfThenElse
   build-depends:
     , base
+    , unix >= 2.7.1
     , text
+    , binary
     , bytestring
     , mtl
     , concurrent-extra
@@ -44,9 +47,7 @@ test-suite test
   main-is:
     Main.hs
   other-modules:
-    Types
     Common
-    RBTree
     RBTreeSpec
     MemtableSpec
     Orphans
