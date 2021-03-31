@@ -55,7 +55,7 @@ withKVReader :: FilePath -> KVReader a -> IO a
 withKVReader path = withFile path ReadMode . runReaderT
 
 hasNext :: KVReader Bool
-hasNext = (ask >>= liftIO . hIsEOF) <&> not
+hasNext = not <$> (ask >>= liftIO . hIsEOF)
 
 seek :: Integer -> KVReader ()
 seek offset = do
