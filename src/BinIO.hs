@@ -18,6 +18,7 @@ module BinIO
     -- * The KVWriter API
     KVWriter,
     withKVWriter,
+    withKVAppender,
     writeKey,
     writeValue,
     writeEntry,
@@ -110,6 +111,9 @@ readEntry = (,) <$> readKey <*> readValue
 
 withKVWriter :: FilePath -> KVWriter -> IO ()
 withKVWriter path = withFile path WriteMode . runReaderT
+
+withKVAppender :: FilePath -> KVWriter -> IO ()
+withKVAppender path = withFile path AppendMode . runReaderT
 
 writeKey :: Key -> KVWriter
 writeKey (Key keyBytes) = do
