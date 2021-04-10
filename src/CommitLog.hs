@@ -1,4 +1,15 @@
-module CommitLog where
+module CommitLog
+  ( -- * Common Operations
+    CommitLog,
+    resume,
+    set,
+    unset,
+    purge,
+
+    -- * Debugging
+    close,
+  )
+where
 
 import BinIO
 import Memtable (Memtable)
