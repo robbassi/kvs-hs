@@ -1,7 +1,6 @@
 module CommitLog where
 
 import BinIO
-import Control.Monad (when)
 import Memtable (Memtable)
 import qualified Memtable
 import System.IO (Handle, hClose)
@@ -14,9 +13,7 @@ newtype CommitLog = CommitLog {commitLogHandle :: Handle}
 resume :: FilePath -> IO (Memtable, CommitLog)
 resume commitLogPath = do
   memtable <- Memtable.empty
-  exists <- fileExist commitLogPath
-  when exists $ recoverMemtable commitLogPath memtable
-  commitLogHandle <- openCommitLog commitLogPath
+  commitLogHandle <- openCommitLog commitLogPath memtable
   pure (memtable, CommitLog {..})
 
 set :: CommitLog -> Key -> Value -> IO ()
@@ -44,8 +41,12 @@ recoverMemtable commitLogPath memtable = kvIterIO commitLogPath $ uncurry setEnt
     setEntry key Tombstone = Memtable.unset memtable key
     setEntry key value = Memtable.set memtable key value
 
-openCommitLog :: FilePath -> IO Handle
-openCommitLog commitLogPath = do
+openCommitLog :: FilePath -> Memtable -> IO Handle
+openCommitLog commitLogPath memtable = do
+  exists <- fileExist commitLogPath
+  if exists
+    then recoverMemtable commitLogPath memtable
+    else writeFile commitLogPath mempty
   commitLogFd <- openFd commitLogPath WriteOnly Nothing defaultFileFlags
   setFdOption commitLogFd AppendOnWrite True
   setFdOption commitLogFd SynchronousWrites True
