@@ -18,6 +18,7 @@ module BinIO
     -- * The KVWriter API
     KVWriter,
     withKVWriter,
+    withKVWriter',
     writeKey,
     writeValue,
     writeEntry,
@@ -38,8 +39,6 @@ import qualified Data.ByteString.Lazy as BL
 import Data.Functor ((<&>))
 import Data.Int
 import System.IO
-import System.Posix.IO (handleToFd)
-import System.Posix.Unistd (fileSynchronise)
 import Types
 
 type KVReader = ReaderT Handle IO
@@ -111,6 +110,9 @@ readEntry = (,) <$> readKey <*> readValue
 withKVWriter :: FilePath -> KVWriter -> IO ()
 withKVWriter path = withFile path WriteMode . runReaderT
 
+withKVWriter' :: Handle -> KVWriter -> IO ()
+withKVWriter' = flip runReaderT
+
 writeKey :: Key -> KVWriter
 writeKey (Key keyBytes) = do
   handle <- ask
@@ -138,17 +140,12 @@ writeEntry key value = writeKey key >> writeValue value
 sync :: KVWriter
 sync = do
   handle <- ask
-  liftIO $ do
-    hFlush handle
-    fd <- handleToFd handle
-    fileSynchronise fd
+  liftIO $ hFlush handle
 
 truncate :: KVWriter
 truncate = do
   handle <- ask
-  liftIO $ do
-    hSeek handle AbsoluteSeek 0
-    hSetFileSize handle 0
+  liftIO $ hSetFileSize handle 0
 
 -- Helpers
 

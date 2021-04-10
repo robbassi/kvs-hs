@@ -52,6 +52,7 @@ test-suite test
     RBTreeSpec
     MemtableSpec
     BinIOSpec
+    CommitLogSpec
   hs-source-dirs:
     test
     src
