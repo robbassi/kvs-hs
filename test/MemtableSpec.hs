@@ -1,6 +1,7 @@
 module MemtableSpec where
 
 import Common
+import Control.Monad (replicateM_)
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
@@ -46,7 +47,7 @@ prop_association = monadicIO $ do
 tests :: SpecWith ()
 tests = describe "Memtable" $ do
   it "keeps track of memory usage" $ do
-    property $ withMaxSuccess 100000 prop_minByteCount
+    property $ withMaxSuccess 10000 prop_minByteCount
   it "get returns the correct values" $ do
     property $ withMaxSuccess 10000 prop_association
   it "does not count duplicate inserts" $ do
@@ -54,8 +55,7 @@ tests = describe "Memtable" $ do
         expectedSize = entrySize emptyEntry
     byteCount <- liftIO $ do
       memtable <- Memtable.empty
-      for_ [1 .. approximateBytesThreshold] $
-        const $ do
-          uncurry (Memtable.set memtable) emptyEntry
+      replicateM_ approximateBytesThreshold $
+        uncurry (Memtable.set memtable) emptyEntry
       Memtable.approximateBytes memtable
     byteCount `shouldBe` expectedSize
