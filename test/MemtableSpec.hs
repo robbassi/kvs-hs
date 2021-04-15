@@ -13,6 +13,9 @@ import Test.QuickCheck (Property, generate, property, withMaxSuccess)
 import Test.QuickCheck.Monadic (assert, monadicIO, run)
 import Types
 
+approximateBytesThreshold :: Int
+approximateBytesThreshold = 1024
+
 buildMemtable :: IO ([Entry], Memtable)
 buildMemtable = do
   memtable <- Memtable.empty
@@ -32,7 +35,7 @@ prop_minByteCount = monadicIO $ do
   (input, memtable) <- run buildMemtable
   let inputSize = sum $ entrySize <$> input
   byteCount <- run $ Memtable.approximateBytes memtable
-  assert $ byteCount == inputSize
+  assert $ abs (byteCount - inputSize) <= approximateBytesThreshold
 
 prop_association :: Property
 prop_association = monadicIO $ do
