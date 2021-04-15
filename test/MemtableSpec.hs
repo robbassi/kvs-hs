@@ -32,7 +32,7 @@ prop_minByteCount = monadicIO $ do
   (input, memtable) <- run buildMemtable
   let inputSize = sum $ entrySize <$> input
   byteCount <- run $ Memtable.approximateBytes memtable
-  assert $ byteCount >= inputSize
+  assert $ byteCount == inputSize
 
 prop_association :: Property
 prop_association = monadicIO $ do
