@@ -18,6 +18,7 @@ common com
     RecordWildCards
     OverloadedStrings
     DoAndIfThenElse
+    TupleSections
   build-depends:
     , base
     , unix >= 2.7.1
