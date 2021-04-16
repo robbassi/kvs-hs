@@ -1,9 +1,14 @@
 module Memtable
-  ( Memtable,
+  ( -- * Memtable API
+    Memtable,
     Memtable.empty,
+
+    -- * Mutation
     set,
-    get,
     unset,
+
+    -- * Other
+    get,
     entries,
     approximateBytes,
   )
@@ -29,12 +34,20 @@ empty = do
 
 set :: Memtable -> Key -> Value -> IO ()
 set Memtable {..} key value = do
-  atomicAdd memBytes (keySize + valueSize)
   tree <- readIORef memTree
+  mValue <- RBTree.search tree key
+  case mValue of
+    Just Tombstone ->
+      atomicAdd memBytes newValueSize
+    Just (Value valueBytes) -> do
+      let oldValueSize = BS.length valueBytes
+      atomicAdd memBytes (newValueSize - oldValueSize)
+    Nothing -> do
+      let keySize = BS.length $ coerce key
+      atomicAdd memBytes (keySize + newValueSize)
   RBTree.insert tree key value
   where
-    keySize = BS.length $ coerce key
-    valueSize = case value of
+    newValueSize = case value of
       Value valueBytes -> BS.length valueBytes
       Tombstone -> 0
 
