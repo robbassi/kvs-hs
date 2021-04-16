@@ -4,8 +4,6 @@ import Common
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
 import Data.Foldable (for_)
-import Data.Maybe (fromJust)
-import Data.Traversable (for)
 import Memtable (Memtable)
 import qualified Memtable
 import Test.Hspec (SpecWith, describe, it)
@@ -16,7 +14,7 @@ import Types
 buildMemtable :: IO ([Entry], Memtable)
 buildMemtable = do
   memtable <- Memtable.empty
-  input <- generate entriesUniqueByKey
+  input <- generate entriesWithDuplicateKeys
   for_ input (uncurry $ Memtable.set memtable)
   pure (input, memtable)
 
@@ -30,16 +28,15 @@ entrySize (key, Value valueBytes) = keySize + valueSize
 prop_minByteCount :: Property
 prop_minByteCount = monadicIO $ do
   (input, memtable) <- run buildMemtable
-  let inputSize = sum $ entrySize <$> input
+  let inputSize = sum $ entrySize <$> latestEntries input
   byteCount <- run $ Memtable.approximateBytes memtable
-  assert $ byteCount >= inputSize
+  assert $ byteCount == inputSize
 
 prop_association :: Property
 prop_association = monadicIO $ do
   (input, memtable) <- run buildMemtable
-  valuesOut <- run $ for input (fmap fromJust . Memtable.get memtable . fst)
-  let valuesIn = snd <$> input
-  assert $ valuesIn == valuesOut
+  valuesOut <- run $ Memtable.entries memtable
+  assert $ latestEntries input == valuesOut
 
 tests :: SpecWith ()
 tests = describe "Memtable" $ do

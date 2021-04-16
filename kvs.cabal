@@ -19,6 +19,7 @@ common com
     OverloadedStrings
     DoAndIfThenElse
     TupleSections
+    LambdaCase
   build-depends:
     , base
     , unix >= 2.7.1
