@@ -59,6 +59,5 @@ test-suite test
     src
   build-depends:
     , hspec
-    , hspec-expectations
     , QuickCheck
     , quickcheck-instances
