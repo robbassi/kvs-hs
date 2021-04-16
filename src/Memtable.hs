@@ -36,39 +36,29 @@ set :: Memtable -> Key -> Value -> IO ()
 set Memtable {..} key value = do
   tree <- readIORef memTree
   mValue <- RBTree.search tree key
-  case mValue of
-    Just Tombstone ->
-      atomicAdd memBytes newValueSize
-    Just (Value valueBytes) -> do
-      let oldValueSize = BS.length valueBytes
-      atomicAdd memBytes (newValueSize - oldValueSize)
-    Nothing -> do
-      let keySize = BS.length $ coerce key
-      atomicAdd memBytes (keySize + newValueSize)
+  let sizeDiff' = sizeDiff mValue
   RBTree.insert tree key value
+  atomicAdd memBytes sizeDiff'
   where
     newValueSize = case value of
       Value valueBytes -> BS.length valueBytes
       Tombstone -> 0
+    sizeDiff = \case
+      Just Tombstone -> newValueSize
+      Just (Value valueBytes) -> newValueSize - oldValueSize
+        where
+          oldValueSize = BS.length valueBytes
+      Nothing -> keySize + newValueSize
+        where
+          keySize = BS.length $ coerce key
+
+unset :: Memtable -> Key -> IO ()
+unset memtable key = set memtable key Tombstone
 
 get :: Memtable -> Key -> IO (Maybe Value)
 get Memtable {..} key = do
   tree <- readIORef memTree
   RBTree.search tree key
-
-unset :: Memtable -> Key -> IO ()
-unset Memtable {..} key = do
-  tree <- readIORef memTree
-  mValue <- RBTree.search tree key
-  case mValue of
-    Just Tombstone -> pure ()
-    Just (Value valueBytes) -> do
-      let valueSize = BS.length valueBytes
-      atomicAdd memBytes $ negate valueSize
-    Nothing -> do
-      let keySize = BS.length $ coerce key
-      atomicAdd memBytes keySize
-  RBTree.insert tree key Tombstone
 
 entries :: Memtable -> IO [Entry]
 entries Memtable {..} = RBTree.toList =<< readIORef memTree
