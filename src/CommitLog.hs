@@ -3,7 +3,6 @@ module CommitLog
     CommitLog,
     resume,
     set,
-    unset,
     purge,
 
     -- * Debugging
@@ -33,12 +32,6 @@ set CommitLog {..} key value =
     writeEntry key value
     sync
 
-unset :: CommitLog -> Key -> IO ()
-unset CommitLog {..} key =
-  withKVWriter' commitLogHandle $ do
-    writeEntry key Tombstone
-    sync
-
 purge :: CommitLog -> IO ()
 purge CommitLog {..} =
   withKVWriter' commitLogHandle BinIO.truncate
@@ -47,10 +40,7 @@ close :: CommitLog -> IO ()
 close CommitLog {..} = hClose commitLogHandle
 
 recoverMemtable :: FilePath -> Memtable -> IO ()
-recoverMemtable commitLogPath memtable = kvIterIO commitLogPath $ uncurry setEntry
-  where
-    setEntry key Tombstone = Memtable.unset memtable key
-    setEntry key value = Memtable.set memtable key value
+recoverMemtable commitLogPath memtable = kvIterIO commitLogPath $ uncurry $ Memtable.set memtable
 
 openCommitLog :: FilePath -> Memtable -> IO Handle
 openCommitLog commitLogPath memtable = do

@@ -53,18 +53,6 @@ set k v = do
       when (byteCount >= mtMaxSize) $
         flushMemory kvsData
 
-unset :: Key -> Kvs ()
-unset k = do
-  kvsData@KvsData {..} <- ask
-  lift $
-    RWLock.withWrite rwLock $ do
-      memtable' <- readIORef memtable
-      void $ CommitLog.unset commitLog k
-      void $ Memtable.unset memtable' k
-      byteCount <- Memtable.approximateBytes memtable'
-      when (byteCount >= mtMaxSize) $
-        flushMemory kvsData
-
 flushMemory :: KvsData -> IO ()
 flushMemory KvsData {..} = do
   memtable' <- readIORef memtable

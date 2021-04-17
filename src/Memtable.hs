@@ -2,12 +2,7 @@ module Memtable
   ( -- * Memtable API
     Memtable,
     Memtable.empty,
-
-    -- * Mutation
     set,
-    unset,
-
-    -- * Other
     get,
     entries,
     approximateBytes,
@@ -49,9 +44,6 @@ set Memtable {..} key value = do
       Nothing -> keySize + newValueSize
     atomicAdd ref n = do
       atomicModifyIORef' ref (\n' -> (n' + n, ()))
-
-unset :: Memtable -> Key -> IO ()
-unset memtable key = set memtable key Tombstone
 
 get :: Memtable -> Key -> IO (Maybe Value)
 get Memtable {..} key = do
