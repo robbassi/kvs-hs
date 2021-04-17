@@ -1,19 +1,29 @@
-module Kvs where
+module Kvs
+  ( -- * KVS API
+    Kvs,
+    get,
+    set,
 
-import CommitLog
+    -- * Kvs State
+    KvsData,
+    mkKvsData,
+  )
+where
+
+import CommitLog (CommitLog)
+import qualified CommitLog
 import Control.Applicative ((<|>))
 import Control.Concurrent.ReadWriteLock (RWLock)
 import qualified Control.Concurrent.ReadWriteLock as RWLock
 import Control.Monad.Reader
 import Data.IORef
-import Memtable
+import Memtable (Memtable)
+import qualified Memtable
 import Segments
 import Types
 
 mtMaxSize :: Int
 mtMaxSize = 5000000
-
-type SegmentPath = String
 
 data KvsData = KvsData
   { commitLog :: CommitLog,

@@ -1,5 +1,5 @@
 module CommitLog
-  ( -- * Common Operations
+  ( -- * Common API
     CommitLog,
     resume,
     set,

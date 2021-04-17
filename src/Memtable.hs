@@ -2,10 +2,10 @@ module Memtable
   ( -- * Memtable API
     Memtable,
     Memtable.empty,
-    set,
     get,
     entries,
     approximateBytes,
+    set,
   )
 where
 
@@ -27,6 +27,17 @@ empty = do
   memTree <- newIORef =<< RBTree.empty
   pure $ Memtable {..}
 
+get :: Memtable -> Key -> IO (Maybe Value)
+get Memtable {..} key = do
+  tree <- readIORef memTree
+  RBTree.search tree key
+
+entries :: Memtable -> IO [Entry]
+entries Memtable {..} = RBTree.toList =<< readIORef memTree
+
+approximateBytes :: Memtable -> IO Int
+approximateBytes Memtable {..} = readIORef memBytes
+
 set :: Memtable -> Key -> Value -> IO ()
 set Memtable {..} key value = do
   tree <- readIORef memTree
@@ -44,14 +55,3 @@ set Memtable {..} key value = do
       Nothing -> keySize + newValueSize
     atomicAdd ref n = do
       atomicModifyIORef' ref (\n' -> (n' + n, ()))
-
-get :: Memtable -> Key -> IO (Maybe Value)
-get Memtable {..} key = do
-  tree <- readIORef memTree
-  RBTree.search tree key
-
-entries :: Memtable -> IO [Entry]
-entries Memtable {..} = RBTree.toList =<< readIORef memTree
-
-approximateBytes :: Memtable -> IO Int
-approximateBytes Memtable {..} = readIORef memBytes
